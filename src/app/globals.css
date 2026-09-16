@@ -1,0 +1,136 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #07080a;
+  --bg-elevated: #0e1014;
+  --panel: #11141a;
+  --panel-border: #2a303c;
+  --text: #f4f5f7;
+  --muted: #7d8699;
+  --lime: #d4ff3a;
+  --lime-dim: #a8d100;
+  --danger: #ff4d4d;
+  --success: #3dff8a;
+  --steel: #3d4658;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-panel: var(--panel);
+  --color-panel-border: var(--panel-border);
+  --color-ink: var(--text);
+  --color-muted: var(--muted);
+  --color-lime: var(--lime);
+  --color-lime-dim: var(--lime-dim);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-steel: var(--steel);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.gym-shell {
+  min-height: 100dvh;
+  position: relative;
+  overflow-x: hidden;
+  background:
+    radial-gradient(ellipse 90% 55% at 70% -5%, rgba(212, 255, 58, 0.09), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 0% 100%, rgba(61, 70, 88, 0.35), transparent 55%),
+    linear-gradient(165deg, #0a0c10 0%, #07080a 45%, #050607 100%);
+}
+
+.gym-shell::before {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.35;
+  background-image: repeating-linear-gradient(
+    -18deg,
+    transparent,
+    transparent 11px,
+    rgba(255, 255, 255, 0.015) 11px,
+    rgba(255, 255, 255, 0.015) 12px
+  );
+}
+
+.gym-shell::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 20% 20%, transparent 0%, rgba(0, 0, 0, 0.45) 100%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
+.gym-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+.display {
+  font-family: var(--font-display), Impact, sans-serif;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-weight: 600;
+  line-height: 0.92;
+}
+
+.eyebrow {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hairline {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    var(--lime),
+    var(--panel-border) 40%,
+    transparent
+  );
+}
+
+.clip-corner {
+  clip-path: polygon(
+    0 0,
+    calc(100% - 14px) 0,
+    100% 14px,
+    100% 100%,
+    14px 100%,
+    0 calc(100% - 14px)
+  );
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a303c;
+}
