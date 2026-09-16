@@ -41,3 +41,8 @@ next-env.d.ts
 # local sqlite
 /data/*.db
 /data/*.db-*
+
+# python / ML
+ml/.venv/
+**/__pycache__/
+.ipynb_checkpoints/

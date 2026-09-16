@@ -1,0 +1,110 @@
+GYMTRACE — Dataset Cleaning & Pre-Processing Proof Log
+============================================================
+
+[BEFORE] Raw shape: (62184, 11)
+[BEFORE] Columns: number_people, date, timestamp, day_of_week, is_weekend, is_holiday, temperature, is_start_of_semester, is_during_semester, month, hour
+
+[BEFORE] head():
+   number_people                       date  timestamp  day_of_week  is_weekend  is_holiday  temperature  is_start_of_semester  is_during_semester  month  hour
+0             37  2015-08-14 17:00:11-07:00      61211            4           0           0        71.76                     0                   0      8    17
+1             45  2015-08-14 17:20:14-07:00      62414            4           0           0        71.76                     0                   0      8    17
+2             40  2015-08-14 17:30:15-07:00      63015            4           0           0        71.76                     0                   0      8    17
+3             44  2015-08-14 17:40:16-07:00      63616            4           0           0        71.76                     0                   0      8    17
+4             45  2015-08-14 17:50:17-07:00      64217            4           0           0        71.76                     0                   0      8    17
+5             46  2015-08-14 18:00:18-07:00      64818            4           0           0        72.15                     0                   0      8    18
+6             43  2015-08-14 18:20:08-07:00      66008            4           0           0        72.15                     0                   0      8    18
+7             53  2015-08-14 18:30:09-07:00      66609            4           0           0        72.15                     0                   0      8    18
+8             54  2015-08-14 18:40:14-07:00      67214            4           0           0        72.15                     0                   0      8    18
+9             43  2015-08-14 18:50:15-07:00      67815            4           0           0        72.15                     0                   0      8    18
+
+[BEFORE] describe():
+       number_people     timestamp   day_of_week    is_weekend    is_holiday   temperature  is_start_of_semester  is_during_semester         month          hour
+count   62184.000000  62184.000000  62184.000000  62184.000000  62184.000000  62184.000000          62184.000000        62184.000000  62184.000000  62184.000000
+mean       29.072543  45799.437958      2.982504      0.282870      0.002573     58.557108              0.078831            0.660218      7.439824     12.236460
+std        22.689026  24211.275891      1.996825      0.450398      0.050660      6.316396              0.269476            0.473639      3.445069      6.717631
+min         0.000000      0.000000      0.000000      0.000000      0.000000     38.140000              0.000000            0.000000      1.000000      0.000000
+25%         9.000000  26624.000000      1.000000      0.000000      0.000000     55.000000              0.000000            0.000000      5.000000      7.000000
+50%        28.000000  46522.500000      3.000000      0.000000      0.000000     58.340000              0.000000            1.000000      8.000000     12.000000
+75%        43.000000  66612.000000      5.000000      1.000000      0.000000     62.280000              0.000000            1.000000     10.000000     18.000000
+max       145.000000  86399.000000      6.000000      1.000000      1.000000     87.170000              1.000000            1.000000     12.000000     23.000000
+
+Saved figure: /Users/kirkrodenc.pacanan/Documents/GitHub/GYMTRACE/ml/proof/01_before_target_distribution.png
+
+[DURING] Missing values:
+number_people           0
+date                    0
+timestamp               0
+day_of_week             0
+is_weekend              0
+is_holiday              0
+temperature             0
+is_start_of_semester    0
+is_during_semester      0
+month                   0
+hour                    0
+[DURING] Total missing cells: 0
+[DURING] Duplicate rows: 0
+
+[DURING] Dtypes:
+number_people             int64
+date                     object
+timestamp                 int64
+day_of_week               int64
+is_weekend                int64
+is_holiday                int64
+temperature             float64
+is_start_of_semester      int64
+is_during_semester        int64
+month                     int64
+hour                      int64
+[DURING] number_people IQR [-42.00, 94.00] outliers=355
+[DURING] temperature IQR [44.08, 73.20] outliers=1727
+Saved figure: /Users/kirkrodenc.pacanan/Documents/GitHub/GYMTRACE/ml/proof/01b_during_missing_values.png
+
+[CLEAN] Rows before: 62184
+[CLEAN] Rows after:  62184
+[CLEAN] Rows removed: 0
+[CLEAN] Target values capped (IQR): 355
+[CLEAN] Remaining missing: 0
+
+[PREPROCESS] Train size: (49747, 9)
+[PREPROCESS] Test size:  (12437, 9)
+
+[PREPROCESS] Scaled train sample:
+       timestamp  day_of_week  is_weekend  is_holiday  temperature  is_start_of_semester  is_during_semester     month      hour
+35235   1.349767    -0.493318   -0.629328    -0.05019     0.445936             -0.292835           -1.396448 -0.127028  1.306188
+21476   1.480710    -1.495118   -0.629328    -0.05019    -0.485737             -0.292835            0.716102 -1.289776  1.454973
+24103   0.291907    -0.994218   -0.629328    -0.05019     1.723026             -0.292835            0.716102 -0.999089  0.264694
+23300   0.316717     1.009382    1.588995    -0.05019     0.032388             -0.292835            0.716102 -0.999089  0.264694
+43598  -0.573627     1.510282    1.588995    -0.05019    -0.297184             -0.292835            0.716102  0.454346 -0.628014
+
+[AFTER] Cleaned shape: (62184, 11)
+
+[AFTER] head():
+   number_people                      date  timestamp  day_of_week  is_weekend  is_holiday  temperature  is_start_of_semester  is_during_semester  month  hour
+0             37 2015-08-15 00:00:11+00:00      61211            4           0           0        71.76                     0                   0      8    17
+1             45 2015-08-15 00:20:14+00:00      62414            4           0           0        71.76                     0                   0      8    17
+2             40 2015-08-15 00:30:15+00:00      63015            4           0           0        71.76                     0                   0      8    17
+3             44 2015-08-15 00:40:16+00:00      63616            4           0           0        71.76                     0                   0      8    17
+4             45 2015-08-15 00:50:17+00:00      64217            4           0           0        71.76                     0                   0      8    17
+5             46 2015-08-15 01:00:18+00:00      64818            4           0           0        72.15                     0                   0      8    18
+6             43 2015-08-15 01:20:08+00:00      66008            4           0           0        72.15                     0                   0      8    18
+7             53 2015-08-15 01:30:09+00:00      66609            4           0           0        72.15                     0                   0      8    18
+8             54 2015-08-15 01:40:14+00:00      67214            4           0           0        72.15                     0                   0      8    18
+9             43 2015-08-15 01:50:15+00:00      67815            4           0           0        72.15                     0                   0      8    18
+
+[AFTER] describe():
+       number_people     timestamp   day_of_week    is_weekend    is_holiday   temperature  is_start_of_semester  is_during_semester         month          hour
+count   62184.000000  62184.000000  62184.000000  62184.000000  62184.000000  62184.000000          62184.000000        62184.000000  62184.000000  62184.000000
+mean       29.020809  45799.437958      2.982504      0.282870      0.002573     58.557108              0.078831            0.660218      7.439824     12.236460
+std        22.522765  24211.275891      1.996825      0.450398      0.050660      6.316396              0.269476            0.473639      3.445069      6.717631
+min         0.000000      0.000000      0.000000      0.000000      0.000000     38.140000              0.000000            0.000000      1.000000      0.000000
+25%         9.000000  26624.000000      1.000000      0.000000      0.000000     55.000000              0.000000            0.000000      5.000000      7.000000
+50%        28.000000  46522.500000      3.000000      0.000000      0.000000     58.340000              0.000000            1.000000      8.000000     12.000000
+75%        43.000000  66612.000000      5.000000      1.000000      0.000000     62.280000              0.000000            1.000000     10.000000     18.000000
+max        94.000000  86399.000000      6.000000      1.000000      1.000000     87.170000              1.000000            1.000000     12.000000     23.000000
+Saved figure: /Users/kirkrodenc.pacanan/Documents/GitHub/GYMTRACE/ml/proof/02_after_vs_before.png
+Saved figure: /Users/kirkrodenc.pacanan/Documents/GitHub/GYMTRACE/ml/proof/03_before_head_table.png
+Saved figure: /Users/kirkrodenc.pacanan/Documents/GitHub/GYMTRACE/ml/proof/04_after_head_table.png
+
+Saved cleaned CSV: /Users/kirkrodenc.pacanan/Documents/GitHub/GYMTRACE/ml/data/processed/gym_crowdedness_clean.csv
