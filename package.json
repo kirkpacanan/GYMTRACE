@@ -9,7 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "better-sqlite3": "^11.10.0",
+    "@supabase/supabase-js": "^2.118.0",
+    "@vladmandic/face-api": "^1.7.15",
     "framer-motion": "^12.23.12",
     "next": "^15.5.3",
     "react": "^19.1.1",
@@ -19,7 +20,6 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
     "@tailwindcss/postcss": "^4.1.13",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

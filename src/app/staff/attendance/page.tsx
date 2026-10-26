@@ -28,7 +28,7 @@ export default function StaffAttendancePage() {
   return (
     <PinGate role="staff">
       <h1 className="display text-4xl text-ink">Attendance</h1>
-      <p className="mt-2 text-muted">Recent face and day-pass entries.</p>
+      <p className="mt-2 text-muted">Face check-ins, check-outs, and day-pass entries.</p>
       <Panel className="mt-6 divide-y divide-panel-border overflow-hidden">
         {error ? (
           <p className="p-6 text-danger">{error}</p>
@@ -52,6 +52,7 @@ export default function StaffAttendancePage() {
                 <p className="text-xs text-muted">{formatEntry(item.entryAt)}</p>
               </div>
               <span className="rounded-full border border-panel-border px-3 py-1 text-xs uppercase tracking-wider text-muted">
+                {(item.event === "check_out" ? "Check out" : "Check in")} ·{" "}
                 {item.source.replace("_", " ")}
               </span>
             </motion.div>

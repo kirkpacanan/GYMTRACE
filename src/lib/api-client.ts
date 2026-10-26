@@ -1,6 +1,6 @@
 import type { Attendance, DayPass, Member } from "./db";
 import type { OccupancySnapshot } from "./occupancy";
-import type { FaceScanResult } from "./face-mock";
+import type { FaceScanResult } from "./face-match";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -18,10 +18,16 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  scanFace: (faceTag?: string) =>
+  scanFace: (descriptor: number[], action: "check_in" | "check_out" = "check_in") =>
     request<FaceScanResult>("/api/face/scan", {
       method: "POST",
-      body: JSON.stringify({ faceTag }),
+      body: JSON.stringify({ descriptor, action }),
+    }),
+
+  enrollFace: (id: number, descriptor: number[]) =>
+    request<{ ok: boolean; member: Member }>(`/api/members/${id}/face`, {
+      method: "POST",
+      body: JSON.stringify({ descriptor }),
     }),
 
   occupancy: () => request<OccupancySnapshot>("/api/occupancy"),
@@ -50,6 +56,9 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
+
+  deleteMember: (id: number) =>
+    request<{ ok: boolean }>(`/api/members/${id}`, { method: "DELETE" }),
 
   purchaseDayPass: (body: { name: string; contact: string; method: string }) =>
     request<DayPass>("/api/day-passes/purchase", {

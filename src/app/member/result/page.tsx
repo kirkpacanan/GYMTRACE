@@ -7,7 +7,7 @@ import { PageTransition } from "@/components/motion/PageTransition";
 import { PageHeader } from "@/components/ui/Brand";
 import { Button } from "@/components/ui/Button";
 import { Panel } from "@/components/ui/Panel";
-import type { FaceScanResult } from "@/lib/face-mock";
+import type { FaceScanResult } from "@/lib/face-match";
 
 export default function MemberResultPage() {
   const [result, setResult] = useState<FaceScanResult | null>(null);
@@ -18,11 +18,14 @@ export default function MemberResultPage() {
   }, []);
 
   const granted = result?.granted;
+  const checkedOut = granted && result?.event === "check_out";
 
   return (
     <PageTransition>
       <PageHeader
-        title={granted ? "Access Granted" : "Access Denied"}
+        title={
+          checkedOut ? "Checked Out" : granted ? "Access Granted" : "Access Denied"
+        }
         subtitle={result?.reason || "Complete a face scan first."}
         backHref="/member/check-in"
       />
@@ -34,7 +37,7 @@ export default function MemberResultPage() {
             granted ? "text-success" : "text-danger"
           }`}
         >
-          {granted ? "CLEAR" : "BLOCK"}
+          {checkedOut ? "OUT" : granted ? "CLEAR" : "BLOCK"}
         </motion.p>
         <div className="hairline my-6 max-w-md" />
         <h2 className="display text-2xl text-ink sm:text-3xl">

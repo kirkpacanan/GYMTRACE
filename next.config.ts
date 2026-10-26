@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["better-sqlite3"],
+  transpilePackages: ["@vladmandic/face-api"],
 };
 
 export default nextConfig;

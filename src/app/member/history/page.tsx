@@ -69,11 +69,17 @@ export default function MemberHistoryPage() {
               <div>
                 <p className="font-medium text-ink">{formatEntry(item.entryAt)}</p>
                 <p className="text-xs uppercase tracking-wider text-muted">
-                  {item.source.replace("_", " ")}
+                  {(item.event || "check_in").replace("_", " ")} · {item.source.replace("_", " ")}
                 </p>
               </div>
-              <span className="rounded-full border border-lime/30 bg-lime/10 px-3 py-1 text-xs text-lime">
-                Entry
+              <span
+                className={`rounded-full border px-3 py-1 text-xs ${
+                  item.event === "check_out"
+                    ? "border-panel-border text-muted"
+                    : "border-lime/30 bg-lime/10 text-lime"
+                }`}
+              >
+                {item.event === "check_out" ? "Check out" : "Check in"}
               </span>
             </motion.div>
           ))

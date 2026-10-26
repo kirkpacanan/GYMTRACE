@@ -1,4 +1,4 @@
-import { getDb } from "./db";
+import { dbError, supabase } from "./db";
 
 export const GYM_CAPACITY = 80;
 
@@ -80,15 +80,27 @@ function formatHourLabel(h: number) {
   return `${display} ${ampm}`;
 }
 
-function liveAttendanceBoost(): number {
-  const db = getDb();
-  const row = db
-    .prepare(
-      `SELECT COUNT(*) as c FROM attendance
-       WHERE entry_at >= datetime('now', '-3 hours')`,
-    )
-    .get() as { c: number };
-  return Math.min(25, row.c * 3);
+async function countPeopleInside(): Promise<number> {
+  const { data, error } = await supabase()
+    .from("attendance")
+    .select("id, member_id, day_pass_id, event, entry_at")
+    .order("id", { ascending: false });
+  dbError(error);
+
+  const seen = new Set<string>();
+  const cutoff = Date.now() - 12 * 60 * 60 * 1000;
+  let inside = 0;
+  for (const row of data ?? []) {
+    if (row.member_id == null && row.day_pass_id == null) continue;
+    const key =
+      row.member_id != null ? `m:${row.member_id}` : `d:${row.day_pass_id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if ((row.event || "check_in") !== "check_in") continue;
+    const time = Date.parse(row.entry_at);
+    if (Number.isFinite(time) && time >= cutoff) inside += 1;
+  }
+  return inside;
 }
 
 function predict(hour: number, boost: number, noiseSeed: number) {
@@ -106,23 +118,22 @@ function predict(hour: number, boost: number, noiseSeed: number) {
   };
 }
 
-export function getOccupancySnapshot(): OccupancySnapshot {
+export async function getOccupancySnapshot(): Promise<OccupancySnapshot> {
   const nowDate = new Date();
   const hour = nowDate.getHours();
-  const boost = liveAttendanceBoost();
-  const base = hourProfile(hour);
-  const now = Math.min(GYM_CAPACITY, Math.round(base * 0.7 + boost));
+  const inside = await countPeopleInside();
+  const now = Math.min(GYM_CAPACITY, inside);
   const nextBase = hourProfile((hour + 1) % 24);
   const next30 = Math.min(
     GYM_CAPACITY,
-    Math.round((now + nextBase) / 2 + (Math.sin(nowDate.getMinutes()) + 1) * 2),
+    Math.max(0, Math.round(now * 0.7 + nextBase * 0.3)),
   );
 
   const seriesHours = [6, 7, 8, 12, 17, 18, 19, 20];
   const series: OccupancySeriesPoint[] = seriesHours.map((h) => {
     const people = Math.min(
       GYM_CAPACITY,
-      Math.round(hourProfile(h) + (h === hour ? boost * 0.4 : 0)),
+      Math.round(hourProfile(h) + (h === hour ? inside * 0.4 : 0)),
     );
     return { label: formatHourLabel(h), hour: h, people };
   });
@@ -131,7 +142,7 @@ export function getOccupancySnapshot(): OccupancySnapshot {
 
   const forecast12h: PredictionPoint[] = Array.from({ length: 12 }, (_, i) => {
     const h = (hour + i) % 24;
-    const p = predict(h, boost, nowDate.getDate() + i);
+    const p = predict(h, inside, nowDate.getDate() + i);
     return {
       label: formatHourLabel(h),
       hour: h,
@@ -146,15 +157,17 @@ export function getOccupancySnapshot(): OccupancySnapshot {
     { length: 14 },
     (_, i) => {
       const h = (hour - 7 + i + 24) % 24;
-      const p = predict(h, boost * 0.6, nowDate.getDate());
+      const p = predict(h, inside * 0.6, nowDate.getDate());
       const isPastOrNow = i <= 7;
       const actualNoise = Math.round(Math.sin(h * 0.9 + 2) * 4);
-      const actual = isPastOrNow
-        ? Math.min(
-            GYM_CAPACITY,
-            Math.max(0, p.predicted + actualNoise + (h === hour ? boost * 0.3 : 0)),
-          )
-        : null;
+      const actual = !isPastOrNow
+        ? null
+        : h === hour
+          ? now
+          : Math.min(
+              GYM_CAPACITY,
+              Math.max(0, p.predicted + actualNoise),
+            );
       return {
         label: formatHourLabel(h),
         hour: h,
@@ -172,7 +185,7 @@ export function getOccupancySnapshot(): OccupancySnapshot {
     const weekend = d.getDay() === 0 || d.getDay() === 6;
     const predicted = Math.min(
       GYM_CAPACITY,
-      Math.round((weekend ? 44 : 58) + Math.sin(i * 1.3) * 8 + boost * 0.15),
+      Math.round((weekend ? 44 : 58) + Math.sin(i * 1.3) * 8 + inside * 0.15),
     );
     return {
       label:
@@ -190,7 +203,7 @@ export function getOccupancySnapshot(): OccupancySnapshot {
     { feature: "is_weekend", weight: 0.18 },
     { feature: "temperature", weight: 0.14 },
     { feature: "is_during_semester", weight: 0.12 },
-    { feature: "recent_entries", weight: 0.11 },
+    { feature: "people_inside", weight: 0.22 },
     { feature: "day_of_week", weight: 0.09 },
     { feature: "is_holiday", weight: 0.08 },
   ];
@@ -220,117 +233,107 @@ export function getOccupancySnapshot(): OccupancySnapshot {
   };
 }
 
-export function getReportsSummary() {
-  const db = getDb();
-  const today = db
-    .prepare(
-      `SELECT COUNT(*) as c FROM attendance
-       WHERE date(entry_at) = date('now')`,
-    )
-    .get() as { c: number };
-  const week = db
-    .prepare(
-      `SELECT COUNT(*) as c FROM attendance
-       WHERE entry_at >= datetime('now', '-7 days')`,
-    )
-    .get() as { c: number };
-  const dayPassSales = db
-    .prepare(
-      `SELECT COUNT(*) as c, COALESCE(SUM(amount),0) as revenue
-       FROM day_passes WHERE paid_at >= datetime('now', '-7 days')`,
-    )
-    .get() as { c: number; revenue: number };
-  const faceEntries = db
-    .prepare(
-      `SELECT COUNT(*) as c FROM attendance
-       WHERE source = 'face' AND entry_at >= datetime('now', '-7 days')`,
-    )
-    .get() as { c: number };
+function localDay(value: string | Date) {
+  const date = typeof value === "string" ? new Date(value) : value;
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
 
-  const totalMembers = db
-    .prepare(`SELECT COUNT(*) as c FROM members`)
-    .get() as { c: number };
-  const activeMembers = db
-    .prepare(`SELECT COUNT(*) as c FROM members WHERE status = 'active'`)
-    .get() as { c: number };
+export async function getReportsSummary() {
+  const now = new Date();
+  const weekAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+  const lookback = new Date(weekAgo - 24 * 60 * 60 * 1000).toISOString();
+  const todayKey = localDay(now);
 
-  const memberRevenueMonth = db
-    .prepare(
-      `SELECT COALESCE(SUM(fee_amount), 0) as revenue, COUNT(*) as c
-       FROM members
-       WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now')`,
-    )
-    .get() as { revenue: number; c: number };
+  const [attendanceRes, membersRes, passesRes] = await Promise.all([
+    supabase()
+      .from("attendance")
+      .select("entry_at, source, event")
+      .eq("event", "check_in")
+      .gte("entry_at", lookback),
+    supabase().from("members").select("status, fee_amount, created_at"),
+    supabase().from("day_passes").select("amount, paid_at").gte("paid_at", lookback),
+  ]);
+  dbError(attendanceRes.error);
+  dbError(membersRes.error);
+  dbError(passesRes.error);
 
-  const dayPassMonth = db
-    .prepare(
-      `SELECT COALESCE(SUM(amount), 0) as revenue, COUNT(*) as c
-       FROM day_passes
-       WHERE strftime('%Y-%m', paid_at) = strftime('%Y-%m', 'now')`,
-    )
-    .get() as { revenue: number; c: number };
+  const checks = attendanceRes.data ?? [];
+  const members = membersRes.data ?? [];
+  const passes = passesRes.data ?? [];
+  const sameMonth = (value: string) => {
+    const date = new Date(value);
+    return (
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth()
+    );
+  };
 
-  const byHour = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    const key = d.toISOString().slice(0, 10);
-    const row = db
-      .prepare(
-        `SELECT COUNT(*) as c FROM attendance WHERE date(entry_at) = ?`,
-      )
-      .get(key) as { c: number };
+  const weekChecks = checks.filter((row) => Date.parse(row.entry_at) >= weekAgo);
+  const monthMembers = members.filter((row) => sameMonth(row.created_at));
+  const monthPasses = passes.filter((row) => sameMonth(row.paid_at));
+  const weekPasses = passes.filter((row) => Date.parse(row.paid_at) >= weekAgo);
+
+  const weekSeries = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - i));
+    const key = localDay(date);
     return {
-      label: d.toLocaleDateString("en-US", { weekday: "short" }),
-      entries: row.c,
+      label: date.toLocaleDateString("en-US", { weekday: "short" }),
+      entries: checks.filter((row) => localDay(row.entry_at) === key).length,
     };
   });
 
-  const monthLabel = new Date().toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
-
-  // Daily revenue split for the last 7 days (demo-friendly)
   const revenueWeekSeries = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    const key = d.toISOString().slice(0, 10);
-    const members = db
-      .prepare(
-        `SELECT COALESCE(SUM(fee_amount),0) as revenue FROM members
-         WHERE date(created_at) = ?`,
-      )
-      .get(key) as { revenue: number };
-    const passes = db
-      .prepare(
-        `SELECT COALESCE(SUM(amount),0) as revenue FROM day_passes
-         WHERE date(paid_at) = ?`,
-      )
-      .get(key) as { revenue: number };
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - i));
+    const key = localDay(date);
+    const memberRevenue = members
+      .filter((row) => localDay(row.created_at) === key)
+      .reduce((sum, row) => sum + Number(row.fee_amount || 0), 0);
+    const passRevenue = passes
+      .filter((row) => localDay(row.paid_at) === key)
+      .reduce((sum, row) => sum + Number(row.amount || 0), 0);
     return {
-      label: d.toLocaleDateString("en-US", { weekday: "short" }),
-      members: members.revenue,
-      dayPasses: passes.revenue,
-      total: members.revenue + passes.revenue,
+      label: date.toLocaleDateString("en-US", { weekday: "short" }),
+      members: memberRevenue,
+      dayPasses: passRevenue,
+      total: memberRevenue + passRevenue,
     };
   });
+
+  const memberRevenueMonth = monthMembers.reduce(
+    (sum, row) => sum + Number(row.fee_amount || 0),
+    0,
+  );
+  const dayPassRevenueMonth = monthPasses.reduce(
+    (sum, row) => sum + Number(row.amount || 0),
+    0,
+  );
 
   return {
-    entriesToday: today.c,
-    entriesWeek: week.c,
-    dayPassCountWeek: dayPassSales.c,
-    dayPassRevenueWeek: dayPassSales.revenue,
-    faceEntriesWeek: faceEntries.c,
-    weekSeries: byHour,
-    totalMembers: totalMembers.c,
-    activeMembers: activeMembers.c,
-    memberRevenueMonth: memberRevenueMonth.revenue,
-    membersPaidMonth: memberRevenueMonth.c,
-    dayPassRevenueMonth: dayPassMonth.revenue,
-    dayPassCountMonth: dayPassMonth.c,
-    totalRevenueMonth:
-      memberRevenueMonth.revenue + dayPassMonth.revenue,
-    monthLabel,
+    entriesToday: checks.filter((row) => localDay(row.entry_at) === todayKey)
+      .length,
+    entriesWeek: weekChecks.length,
+    dayPassCountWeek: weekPasses.length,
+    dayPassRevenueWeek: weekPasses.reduce(
+      (sum, row) => sum + Number(row.amount || 0),
+      0,
+    ),
+    faceEntriesWeek: weekChecks.filter((row) => row.source === "face").length,
+    weekSeries,
+    totalMembers: members.length,
+    activeMembers: members.filter((row) => row.status === "active").length,
+    memberRevenueMonth,
+    membersPaidMonth: monthMembers.length,
+    dayPassRevenueMonth,
+    dayPassCountMonth: monthPasses.length,
+    totalRevenueMonth: memberRevenueMonth + dayPassRevenueMonth,
+    monthLabel: now.toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    }),
     revenueWeekSeries,
   };
 }

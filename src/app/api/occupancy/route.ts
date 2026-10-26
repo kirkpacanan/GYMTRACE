@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    return NextResponse.json(getOccupancySnapshot());
+    return NextResponse.json(await getOccupancySnapshot());
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Failed" },

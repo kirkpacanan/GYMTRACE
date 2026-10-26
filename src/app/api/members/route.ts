@@ -1,18 +1,22 @@
 import { NextResponse } from "next/server";
 import {
-  getDb,
+  dbError,
   mapMember,
   MEMBER_MONTHLY_FEE,
+  supabase,
   type MemberStatus,
 } from "@/lib/db";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  const db = getDb();
-  const rows = db.prepare("SELECT * FROM members ORDER BY id DESC").all();
+  const { data, error } = await supabase()
+    .from("members")
+    .select("*")
+    .order("id", { ascending: false });
+  dbError(error);
   return NextResponse.json({
-    items: rows.map((r) => mapMember(r as Record<string, unknown>)),
+    items: (data ?? []).map((row) => mapMember(row)),
   });
 }
 
@@ -39,19 +43,19 @@ export async function POST(req: Request) {
     const faceTag =
       body.faceTag?.trim() ||
       `face-${body.name.toLowerCase().replace(/\s+/g, "-")}-${Date.now().toString(36)}`;
-    const db = getDb();
-    const info = db
-      .prepare(
-        `INSERT INTO members (name, contact, status, face_tag, fee_amount)
-         VALUES (?, ?, ?, ?, ?)`,
-      )
-      .run(body.name.trim(), body.contact.trim(), status, faceTag, feeAmount);
-    const row = db
-      .prepare("SELECT * FROM members WHERE id = ?")
-      .get(info.lastInsertRowid);
-    return NextResponse.json(mapMember(row as Record<string, unknown>), {
-      status: 201,
-    });
+    const { data, error } = await supabase()
+      .from("members")
+      .insert({
+        name: body.name.trim(),
+        contact: body.contact.trim(),
+        status,
+        face_tag: faceTag,
+        fee_amount: feeAmount,
+      })
+      .select("*")
+      .single();
+    dbError(error);
+    return NextResponse.json(mapMember(data), { status: 201 });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Create failed" },

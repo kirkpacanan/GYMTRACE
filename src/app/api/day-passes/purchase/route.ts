@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
-import { getDb, mapDayPass } from "@/lib/db";
+import { dbError, mapDayPass, supabase } from "@/lib/db";
 
 export const runtime = "nodejs";
 
-function nextCode(db: ReturnType<typeof getDb>) {
-  const row = db
-    .prepare(
-      `SELECT code FROM day_passes WHERE code LIKE 'DP-%' ORDER BY id DESC LIMIT 1`,
-    )
-    .get() as { code?: string } | undefined;
-  const n = row?.code ? Number(row.code.replace("DP-", "")) || 2200 : 2200;
+async function nextCode() {
+  const { data, error } = await supabase()
+    .from("day_passes")
+    .select("code")
+    .like("code", "DP-%")
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  dbError(error);
+  const n = data?.code ? Number(data.code.replace("DP-", "")) || 2200 : 2200;
   return `DP-${n + 1}`;
 }
 
@@ -26,26 +29,25 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-    // Mock payment: fail ~8% for demo of failure path
     if (Math.random() < 0.08) {
       return NextResponse.json(
         { error: "Payment failed — try again" },
         { status: 402 },
       );
     }
-    const db = getDb();
-    const code = nextCode(db);
-    const info = db
-      .prepare(
-        `INSERT INTO day_passes (code, name, contact, amount) VALUES (?, ?, ?, ?)`,
-      )
-      .run(code, body.name.trim(), body.contact.trim(), 250);
-    const row = db
-      .prepare("SELECT * FROM day_passes WHERE id = ?")
-      .get(info.lastInsertRowid);
-    return NextResponse.json(mapDayPass(row as Record<string, unknown>), {
-      status: 201,
-    });
+    const code = await nextCode();
+    const { data, error } = await supabase()
+      .from("day_passes")
+      .insert({
+        code,
+        name: body.name.trim(),
+        contact: body.contact.trim(),
+        amount: 250,
+      })
+      .select("*")
+      .single();
+    dbError(error);
+    return NextResponse.json(mapDayPass(data), { status: 201 });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Purchase failed" },

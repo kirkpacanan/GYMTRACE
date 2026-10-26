@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { dbError, supabase } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -15,11 +15,13 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-    const db = getDb();
-    const row = db
-      .prepare("SELECT pin FROM staff_pins WHERE role = ?")
-      .get(body.role) as { pin: string } | undefined;
-    if (!row || row.pin !== body.pin) {
+    const { data, error } = await supabase()
+      .from("staff_pins")
+      .select("pin")
+      .eq("role", body.role)
+      .maybeSingle();
+    dbError(error);
+    if (!data || data.pin !== body.pin) {
       return NextResponse.json({ ok: false, error: "Invalid PIN" }, { status: 401 });
     }
     return NextResponse.json({ ok: true });

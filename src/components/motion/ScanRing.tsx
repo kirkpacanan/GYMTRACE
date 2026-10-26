@@ -1,13 +1,16 @@
 "use client";
 
 import { motion } from "framer-motion";
+import type { RefObject } from "react";
 
 export function ScanRing({
   scanning,
   status,
+  videoRef,
 }: {
   scanning: boolean;
   status: "idle" | "scanning" | "granted" | "denied";
+  videoRef?: RefObject<HTMLVideoElement | null>;
 }) {
   const accent =
     status === "granted"
@@ -38,10 +41,17 @@ export function ScanRing({
       ))}
 
       <div className="absolute inset-8 overflow-hidden bg-gradient-to-b from-[#151922] to-[#0a0c10]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(212,255,58,0.12),transparent_60%)]" />
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          playsInline
+          className="absolute inset-0 h-full w-full object-cover [transform:scaleX(-1)]"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(212,255,58,0.12),transparent_60%)]" />
 
         {/* Face guide */}
-        <div className="absolute inset-[18%] rounded-[40%] border border-white/15" />
+        <div className="pointer-events-none absolute inset-[18%] rounded-[40%] border border-white/25" />
 
         {scanning ? (
           <>

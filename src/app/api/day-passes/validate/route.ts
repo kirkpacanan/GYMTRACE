@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDb, mapDayPass } from "@/lib/db";
+import { dbError, mapDayPass, supabase } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -10,10 +10,12 @@ export async function POST(req: Request) {
     if (!code) {
       return NextResponse.json({ error: "Pass code required" }, { status: 400 });
     }
-    const db = getDb();
-    const row = db
-      .prepare("SELECT * FROM day_passes WHERE upper(code) = ?")
-      .get(code) as Record<string, unknown> | undefined;
+    const { data: row, error } = await supabase()
+      .from("day_passes")
+      .select("*")
+      .eq("code", code)
+      .maybeSingle();
+    dbError(error);
     if (!row) {
       return NextResponse.json({
         granted: false,
@@ -27,23 +29,30 @@ export async function POST(req: Request) {
         dayPass: mapDayPass(row),
       });
     }
-    db.prepare(
-      `UPDATE day_passes SET used_at = datetime('now') WHERE id = ?`,
-    ).run(row.id);
-    const att = db
-      .prepare(
-        `INSERT INTO attendance (member_id, day_pass_id, entry_at, source)
-         VALUES (NULL, ?, datetime('now'), 'day_pass')`,
-      )
-      .run(row.id);
-    const updated = db
-      .prepare("SELECT * FROM day_passes WHERE id = ?")
-      .get(row.id);
+    const { data: updated, error: updateError } = await supabase()
+      .from("day_passes")
+      .update({ used_at: new Date().toISOString() })
+      .eq("id", row.id)
+      .select("*")
+      .single();
+    dbError(updateError);
+    const { data: attendance, error: attendanceError } = await supabase()
+      .from("attendance")
+      .insert({
+        member_id: null,
+        day_pass_id: row.id,
+        source: "day_pass",
+        event: "check_in",
+      })
+      .select("id")
+      .single();
+    dbError(attendanceError);
+    if (!attendance) throw new Error("Could not record attendance");
     return NextResponse.json({
       granted: true,
       reason: "Day pass validated — welcome",
-      dayPass: mapDayPass(updated as Record<string, unknown>),
-      attendanceId: Number(att.lastInsertRowid),
+      dayPass: mapDayPass(updated),
+      attendanceId: Number(attendance.id),
     });
   } catch (e) {
     return NextResponse.json(

@@ -9,7 +9,7 @@ const roles = [
     href: "/member/check-in",
     num: "01",
     title: "Member",
-    blurb: "Face check-in · occupancy · history",
+    blurb: "Face check-in · check-out · occupancy",
   },
   {
     href: "/day-pass/purchase",
