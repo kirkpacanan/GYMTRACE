@@ -42,6 +42,7 @@ export const api = {
     contact: string;
     status?: string;
     faceTag?: string;
+    monthsPaid?: number;
   }) =>
     request<Member>("/api/members", {
       method: "POST",
@@ -50,7 +51,12 @@ export const api = {
 
   updateMember: (
     id: number,
-    body: Partial<{ name: string; contact: string; status: string }>,
+    body: Partial<{
+      name: string;
+      contact: string;
+      status: string;
+      monthsToAdd: number;
+    }>,
   ) =>
     request<Member>(`/api/members/${id}`, {
       method: "PATCH",
@@ -66,15 +72,19 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
-  validateDayPass: (code: string) =>
+  validateDayPass: (
+    code: string,
+    action: "check_in" | "check_out" = "check_in",
+  ) =>
     request<{
       granted: boolean;
       reason: string;
+      event?: "check_in" | "check_out";
       dayPass?: DayPass;
       attendanceId?: number;
     }>("/api/day-passes/validate", {
       method: "POST",
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ code, action }),
     }),
 
   attendance: () => request<{ items: Attendance[] }>("/api/attendance"),

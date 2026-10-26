@@ -1,4 +1,4 @@
-import { dbError, supabase } from "./db";
+import { dbError, effectiveMemberStatus, membershipExpiry, supabase } from "./db";
 
 export const GYM_CAPACITY = 80;
 
@@ -252,7 +252,9 @@ export async function getReportsSummary() {
       .select("entry_at, source, event")
       .eq("event", "check_in")
       .gte("entry_at", lookback),
-    supabase().from("members").select("status, fee_amount, created_at"),
+    supabase()
+      .from("members")
+      .select("status, fee_amount, created_at, months_paid, expires_at"),
     supabase().from("day_passes").select("amount, paid_at").gte("paid_at", lookback),
   ]);
   dbError(attendanceRes.error);
@@ -324,7 +326,18 @@ export async function getReportsSummary() {
     faceEntriesWeek: weekChecks.filter((row) => row.source === "face").length,
     weekSeries,
     totalMembers: members.length,
-    activeMembers: members.filter((row) => row.status === "active").length,
+    activeMembers: members.filter((row) => {
+      const monthsPaid = Math.max(1, Number(row.months_paid ?? 1));
+      const expiresAt = row.expires_at
+        ? String(row.expires_at)
+        : membershipExpiry(new Date(row.created_at), monthsPaid);
+      return (
+        effectiveMemberStatus(
+          row.status === "frozen" || row.status === "expired" ? row.status : "active",
+          expiresAt,
+        ) === "active"
+      );
+    }).length,
     memberRevenueMonth,
     membersPaidMonth: monthMembers.length,
     dayPassRevenueMonth,

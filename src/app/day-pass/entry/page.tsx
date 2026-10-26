@@ -12,7 +12,7 @@ import { api } from "@/lib/api-client";
 export default function DayPassEntryPage() {
   const router = useRouter();
   const [code, setCode] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<"check_in" | "check_out" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -27,12 +27,11 @@ export default function DayPassEntryPage() {
     }
   }, []);
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setLoading(true);
+  async function submit(action: "check_in" | "check_out") {
+    setLoading(action);
     setError(null);
     try {
-      const result = await api.validateDayPass(code);
+      const result = await api.validateDayPass(code, action);
       sessionStorage.setItem(
         "gymtrace_day_pass_result",
         JSON.stringify(result),
@@ -41,15 +40,20 @@ export default function DayPassEntryPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Validation failed");
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
+  }
+
+  function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    void submit("check_in");
   }
 
   return (
     <PageTransition>
       <PageHeader
         title="Day-Pass Entry"
-        subtitle="Validate your pass code to log attendance."
+        subtitle="Check in when you arrive and check out when you leave."
         backHref="/day-pass/purchase"
       />
       <Panel className="mx-auto max-w-md p-6 sm:p-8">
@@ -64,13 +68,21 @@ export default function DayPassEntryPage() {
             className="display tracking-wider"
           />
           {error ? <p className="text-sm text-danger">{error}</p> : null}
-          <Button type="submit" size="lg" disabled={loading}>
-            {loading ? "Validating…" : "Validate & Enter"}
-          </Button>
+          <div className="grid grid-cols-2 gap-3">
+            <Button type="submit" size="lg" disabled={loading !== null}>
+              {loading === "check_in" ? "Checking in…" : "Check in"}
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              disabled={loading !== null}
+              onClick={() => void submit("check_out")}
+            >
+              {loading === "check_out" ? "Checking out…" : "Check out"}
+            </Button>
+          </div>
         </form>
-        <p className="mt-4 text-center text-xs text-muted">
-          Demo codes: DP-2201, DP-2202
-        </p>
       </Panel>
     </PageTransition>
   );

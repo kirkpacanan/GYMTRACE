@@ -12,6 +12,7 @@ import type { DayPass } from "@/lib/db";
 type Result = {
   granted: boolean;
   reason: string;
+  event?: "check_in" | "check_out";
   dayPass?: DayPass;
 };
 
@@ -24,11 +25,14 @@ export default function DayPassResultPage() {
   }, []);
 
   const granted = result?.granted;
+  const checkedOut = granted && result?.event === "check_out";
 
   return (
     <PageTransition>
       <PageHeader
-        title={granted ? "Entry Allowed" : "Entry Blocked"}
+        title={
+          checkedOut ? "Checked Out" : granted ? "Entry Allowed" : "Entry Blocked"
+        }
         subtitle={result?.reason || "Validate a pass first."}
         backHref="/day-pass/entry"
       />
@@ -40,7 +44,7 @@ export default function DayPassResultPage() {
             granted ? "text-success" : "text-danger"
           }`}
         >
-          {granted ? "GO" : "STOP"}
+          {checkedOut ? "OUT" : granted ? "GO" : "STOP"}
         </motion.p>
         <div className="hairline my-5 max-w-sm" />
         <p className="text-lg text-ink">{result?.reason}</p>

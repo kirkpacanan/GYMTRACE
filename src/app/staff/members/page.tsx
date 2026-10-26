@@ -12,12 +12,13 @@ import {
   startCamera,
   stopCamera,
 } from "@/lib/face-engine";
-import type { Member, MemberStatus } from "@/lib/db";
+import { formatMembershipEnd, type Member, type MemberStatus } from "@/lib/db";
 
 export default function StaffMembersPage() {
   const [items, setItems] = useState<Member[]>([]);
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
+  const [monthsPaid, setMonthsPaid] = useState("1");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [enrolling, setEnrolling] = useState<Member | null>(null);
@@ -42,9 +43,16 @@ export default function StaffMembersPage() {
     setLoading(true);
     setError(null);
     try {
-      const created = await api.createMember({ name, contact, status: "active" });
+      const months = Math.max(1, Math.floor(Number(monthsPaid) || 1));
+      const created = await api.createMember({
+        name,
+        contact,
+        status: "active",
+        monthsPaid: months,
+      });
       setName("");
       setContact("");
+      setMonthsPaid("1");
       await load();
       setEnrolling(created);
     } catch (err) {
@@ -81,7 +89,7 @@ export default function StaffMembersPage() {
         </h2>
         <form
           onSubmit={enroll}
-          className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]"
+          className="grid gap-3 sm:grid-cols-[1fr_1fr_8rem_auto]"
         >
           <Input
             label="Name"
@@ -93,6 +101,14 @@ export default function StaffMembersPage() {
             label="Contact"
             value={contact}
             onChange={(e) => setContact(e.target.value)}
+            required
+          />
+          <Input
+            label="Months"
+            type="number"
+            min={1}
+            value={monthsPaid}
+            onChange={(e) => setMonthsPaid(e.target.value)}
             required
           />
           <div className="flex items-end">
@@ -174,6 +190,7 @@ export default function StaffMembersPage() {
                   >
                     {m.status}
                   </span>
+                  <p className="mt-1 text-xs text-muted">{formatMembershipEnd(m)}</p>
                 </td>
                 <td className="px-4 py-3">
                   <button
@@ -230,6 +247,7 @@ function EditMemberDialog({
   const [name, setName] = useState(member.name);
   const [contact, setContact] = useState(member.contact);
   const [status, setStatus] = useState<MemberStatus>(member.status);
+  const [monthsToAdd, setMonthsToAdd] = useState("0");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -238,7 +256,12 @@ function EditMemberDialog({
     setSaving(true);
     setError(null);
     try {
-      await api.updateMember(member.id, { name, contact, status });
+      await api.updateMember(member.id, {
+        name,
+        contact,
+        status,
+        monthsToAdd: Math.max(0, Math.floor(Number(monthsToAdd) || 0)),
+      });
       onSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Update failed");
@@ -252,6 +275,7 @@ function EditMemberDialog({
       <Panel className="w-full max-w-md p-5 sm:p-6">
         <p className="eyebrow text-lime">Edit details</p>
         <h2 className="display mt-2 text-3xl text-ink">{member.name}</h2>
+        <p className="mt-2 text-sm text-muted">{formatMembershipEnd(member)}</p>
         <form onSubmit={save} className="mt-5 flex flex-col gap-4">
           <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
           <Input
@@ -260,6 +284,17 @@ function EditMemberDialog({
             onChange={(e) => setContact(e.target.value)}
             required
           />
+          <Input
+            label="Add months"
+            type="number"
+            min={0}
+            value={monthsToAdd}
+            onChange={(e) => setMonthsToAdd(e.target.value)}
+          />
+          <p className="text-xs normal-case tracking-normal text-muted">
+            Extra months extend an active membership. If it already ended, the
+            new months start today. One month is ₱1,500.
+          </p>
           <label className="flex flex-col gap-2 text-xs uppercase tracking-[0.2em] text-muted">
             Status
             <select

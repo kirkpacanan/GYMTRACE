@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { dbError, mapMember, supabase, type MemberStatus } from "@/lib/db";
+import {
+  dbError,
+  mapMember,
+  nextMembershipTerm,
+  supabase,
+  type MemberStatus,
+} from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -13,6 +19,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
       name?: string;
       contact?: string;
       status?: MemberStatus;
+      monthsToAdd?: number;
     };
     const { data: existing, error: lookupError } = await supabase()
       .from("members")
@@ -35,9 +42,23 @@ export async function PATCH(req: Request, ctx: Ctx) {
     if (!["active", "expired", "frozen"].includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
+    const current = mapMember(existing);
+    const term = nextMembershipTerm({
+      monthsPaid: current.monthsPaid,
+      expiresAt: current.expiresAt,
+      monthsToAdd: body.monthsToAdd ?? 0,
+      status,
+    });
     const { data, error } = await supabase()
       .from("members")
-      .update({ name, contact, status })
+      .update({
+        name,
+        contact,
+        status: term.status,
+        months_paid: term.monthsPaid,
+        expires_at: term.expiresAt,
+        fee_amount: term.feeAmount,
+      })
       .eq("id", memberId)
       .select("*")
       .single();

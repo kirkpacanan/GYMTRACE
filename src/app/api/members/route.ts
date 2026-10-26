@@ -3,6 +3,7 @@ import {
   dbError,
   mapMember,
   MEMBER_MONTHLY_FEE,
+  membershipExpiry,
   supabase,
   type MemberStatus,
 } from "@/lib/db";
@@ -28,6 +29,7 @@ export async function POST(req: Request) {
       status?: MemberStatus;
       faceTag?: string;
       feeAmount?: number;
+      monthsPaid?: number;
     };
     if (!body.name?.trim() || !body.contact?.trim()) {
       return NextResponse.json(
@@ -36,10 +38,14 @@ export async function POST(req: Request) {
       );
     }
     const status = body.status || "active";
+    const monthsPaid =
+      typeof body.monthsPaid === "number" && body.monthsPaid >= 1
+        ? Math.floor(body.monthsPaid)
+        : 1;
     const feeAmount =
       typeof body.feeAmount === "number" && body.feeAmount > 0
         ? body.feeAmount
-        : MEMBER_MONTHLY_FEE;
+        : MEMBER_MONTHLY_FEE * monthsPaid;
     const faceTag =
       body.faceTag?.trim() ||
       `face-${body.name.toLowerCase().replace(/\s+/g, "-")}-${Date.now().toString(36)}`;
@@ -51,6 +57,8 @@ export async function POST(req: Request) {
         status,
         face_tag: faceTag,
         fee_amount: feeAmount,
+        months_paid: monthsPaid,
+        expires_at: membershipExpiry(new Date(), monthsPaid),
       })
       .select("*")
       .single();

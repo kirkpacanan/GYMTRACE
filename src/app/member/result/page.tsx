@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/Brand";
 import { Button } from "@/components/ui/Button";
 import { Panel } from "@/components/ui/Panel";
 import type { FaceScanResult } from "@/lib/face-match";
+import { formatMembershipEnd } from "@/lib/db";
 
 export default function MemberResultPage() {
   const [result, setResult] = useState<FaceScanResult | null>(null);
@@ -47,6 +48,9 @@ export default function MemberResultPage() {
               ? result.member.name
               : "No match"}
         </h2>
+        {result?.member ? (
+          <p className="mt-2 text-sm text-lime">{formatMembershipEnd(result.member)}</p>
+        ) : null}
         <p className="mt-2 max-w-lg text-muted">{result?.reason}</p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           {granted ? (

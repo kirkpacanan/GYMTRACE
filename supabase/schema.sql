@@ -9,6 +9,8 @@ create table if not exists members (
   face_tag text not null unique,
   face_descriptor text,
   fee_amount integer not null default 1500,
+  months_paid integer not null default 1,
+  expires_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -48,3 +50,9 @@ on conflict (role) do nothing;
 grant usage on schema public to service_role;
 grant select, insert, update, delete on public.members, public.day_passes, public.attendance, public.staff_pins to service_role;
 grant usage, select on all sequences in schema public to service_role;
+
+alter table members add column if not exists months_paid integer not null default 1;
+alter table members add column if not exists expires_at timestamptz;
+update members
+set expires_at = created_at + (months_paid || ' months')::interval
+where expires_at is null;
