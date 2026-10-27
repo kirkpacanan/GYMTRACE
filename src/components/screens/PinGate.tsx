@@ -21,6 +21,7 @@ const adminLinks = [
   { href: "/admin", label: "Home" },
   { href: "/admin/occupancy", label: "Occupancy" },
   { href: "/admin/revenue", label: "Revenue" },
+  { href: "/admin/rates", label: "Rates" },
 ];
 
 export function PinGate({

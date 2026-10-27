@@ -6,6 +6,10 @@ import {
   supabase,
   type MemberStatus,
 } from "@/lib/db";
+import {
+  getMembershipRates,
+  quoteMembershipFee,
+} from "@/lib/membership-rates";
 
 export const runtime = "nodejs";
 
@@ -43,11 +47,16 @@ export async function PATCH(req: Request, ctx: Ctx) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
     const current = mapMember(existing);
+    const monthsToAdd = body.monthsToAdd ?? 0;
+    const rates = await getMembershipRates();
     const term = nextMembershipTerm({
       monthsPaid: current.monthsPaid,
       expiresAt: current.expiresAt,
-      monthsToAdd: body.monthsToAdd ?? 0,
+      monthsToAdd,
       status,
+      feeAmount: current.feeAmount,
+      addedFee:
+        monthsToAdd > 0 ? quoteMembershipFee(rates, monthsToAdd) : 0,
     });
     const { data, error } = await supabase()
       .from("members")

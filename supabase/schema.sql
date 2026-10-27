@@ -56,3 +56,19 @@ alter table members add column if not exists expires_at timestamptz;
 update members
 set expires_at = created_at + (months_paid || ' months')::interval
 where expires_at is null;
+
+create table if not exists membership_rates (
+  id integer primary key check (id = 1),
+  monthly_price integer not null default 1500 check (monthly_price > 0),
+  six_month_discount_pct integer not null default 10 check (six_month_discount_pct >= 0 and six_month_discount_pct <= 90),
+  yearly_discount_pct integer not null default 20 check (yearly_discount_pct >= 0 and yearly_discount_pct <= 90),
+  updated_at timestamptz not null default now()
+);
+
+alter table membership_rates enable row level security;
+
+insert into membership_rates (id, monthly_price, six_month_discount_pct, yearly_discount_pct)
+values (1, 1500, 10, 20)
+on conflict (id) do nothing;
+
+grant select, insert, update, delete on public.membership_rates to service_role;

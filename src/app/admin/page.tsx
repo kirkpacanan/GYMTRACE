@@ -17,6 +17,12 @@ const sections = [
     title: "Revenue",
     blurb: "Total members, membership fees, day-pass sales this month",
   },
+  {
+    href: "/admin/rates",
+    num: "03",
+    title: "Membership rates",
+    blurb: "Set monthly price and 6-month / yearly discounts",
+  },
 ];
 
 export default function AdminHomePage() {

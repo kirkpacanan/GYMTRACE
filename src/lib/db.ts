@@ -44,13 +44,15 @@ export function nextMembershipTerm(input: {
   expiresAt: string;
   monthsToAdd: number;
   status: MemberStatus;
+  feeAmount: number;
+  addedFee: number;
 }) {
   const extra = Math.max(0, Math.floor(input.monthsToAdd));
   if (extra === 0) {
     return {
       monthsPaid: input.monthsPaid,
       expiresAt: input.expiresAt,
-      feeAmount: MEMBER_MONTHLY_FEE * input.monthsPaid,
+      feeAmount: input.feeAmount,
       status: input.status,
     };
   }
@@ -62,7 +64,7 @@ export function nextMembershipTerm(input: {
   return {
     monthsPaid,
     expiresAt,
-    feeAmount: MEMBER_MONTHLY_FEE * monthsPaid,
+    feeAmount: input.feeAmount + Math.max(0, input.addedFee),
     status: input.status === "frozen" ? "frozen" : "active",
   };
 }

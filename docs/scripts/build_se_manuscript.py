@@ -14,7 +14,7 @@ from docx.shared import Inches, Pt, RGBColor
 
 ROOT = Path(__file__).resolve().parents[2]
 ASSETS = ROOT / "docs" / "se_manuscript_assets"
-OUT = Path.home() / "Downloads" / "GYMTRACE_Software_Project_Proposal_Manuscript.docx"
+OUT = Path.home() / "Downloads" / "GYMTRACE_Software_Engineering_Project_Proposal.docx"
 
 
 def set_run_font(run, size=10, bold=False, italic=False, name="Times New Roman"):
@@ -110,6 +110,31 @@ def add_figure(doc, path: Path, caption: str, width=Inches(3.35)):
     set_run_font(r, size=8, bold=True)
 
 
+def style_table_cell(cell, text, *, bold=False, size=8):
+    cell.text = ""
+    p = cell.paragraphs[0]
+    p.paragraph_format.space_after = Pt(0)
+    p.paragraph_format.space_before = Pt(0)
+    run = p.add_run(text)
+    set_run_font(run, size=size, bold=bold)
+
+
+def add_grid_table(doc, headers, rows, col_widths=None):
+    table = doc.add_table(rows=1 + len(rows), cols=len(headers))
+    table.style = "Table Grid"
+    for i, h in enumerate(headers):
+        style_table_cell(table.rows[0].cells[i], h, bold=True, size=8)
+    for r_i, row in enumerate(rows):
+        for c_i, val in enumerate(row):
+            style_table_cell(table.rows[r_i + 1].cells[c_i], str(val), size=8)
+    if col_widths:
+        for row in table.rows:
+            for cell, w in zip(row.cells, col_widths):
+                cell.width = w
+    doc.add_paragraph().paragraph_format.space_after = Pt(6)
+    return table
+
+
 def add_usecase_table(doc, rows):
     table = doc.add_table(rows=1 + len(rows), cols=2)
     table.style = "Table Grid"
@@ -153,17 +178,45 @@ def build():
         first_line=False,
     )
 
+    # IEEE-style side-by-side authors (borderless 3-column table)
     authors = [
         ("Nicholas Klein Castillanes", "nkCastillanes@mcm.edu.ph"),
         ("Kirk Roden Pacanan", "krPacanan@mcm.edu.ph"),
         ("Gary Louise Querequincia", "glQuerequincia@mcm.edu.ph"),
     ]
-    for name, email in authors:
-        add_para(doc, name, size=11, bold=True, align="center", space_after=0, first_line=False)
-        add_para(doc, "College of Computer and Information Science", size=9, align="center", space_after=0, first_line=False)
-        add_para(doc, "Mapua Malayan Colleges Mindanao", size=9, align="center", space_after=0, first_line=False)
-        add_para(doc, "Davao City, Philippines", size=9, align="center", space_after=0, first_line=False)
-        add_para(doc, email, size=9, italic=True, align="center", space_after=8, first_line=False)
+    affil_lines = [
+        "College of Computer and Information Science",
+        "Mapua Malayan Colleges Mindanao",
+        "Davao City, Philippines",
+    ]
+    author_table = doc.add_table(rows=1, cols=3)
+    author_table.autofit = True
+    # Remove borders
+    tbl = author_table._tbl
+    tblPr = tbl.tblPr if tbl.tblPr is not None else OxmlElement("w:tblPr")
+    borders = OxmlElement("w:tblBorders")
+    for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
+        el = OxmlElement(f"w:{edge}")
+        el.set(qn("w:val"), "nil")
+        borders.append(el)
+    tblPr.append(borders)
+
+    for col_i, (name, email) in enumerate(authors):
+        cell = author_table.rows[0].cells[col_i]
+        cell.text = ""
+        lines = [(name, True, False, 11)] + [(line, False, False, 9) for line in affil_lines] + [(email, False, True, 9)]
+        for li, (text, bold, italic, size) in enumerate(lines):
+            p = cell.paragraphs[0] if li == 0 else cell.add_paragraph()
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p.paragraph_format.space_after = Pt(0)
+            p.paragraph_format.space_before = Pt(0)
+            p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+            run = p.add_run(text)
+            set_run_font(run, size=size, bold=bold, italic=italic)
+
+    spacer = doc.add_paragraph()
+    spacer.paragraph_format.space_after = Pt(8)
+    spacer.paragraph_format.space_before = Pt(0)
 
     # Switch to 2-column before Abstract (IEEE: title/authors full-width; abstract+body two-column)
     body = doc.add_section(WD_SECTION.CONTINUOUS)
@@ -176,9 +229,10 @@ def build():
             ("Abstract—", True, False, 9),
             (
                 "Gym facilities still rely on membership cards, QR codes, or manual desk checks that are easy to share, slow during peak hours, and weak at producing trustworthy occupancy data. "
-                "This software project proposal presents GYMTRACE, a web-based campus gym system that authenticates members through facial recognition, supports day-pass visitors, and uses verified attendance events to drive short-horizon occupancy prediction for members, staff, and administrators. "
-                "The proposal follows an object-oriented software engineering approach with UML use-case, activity, class, and sequence models plus a three-tier system architecture. "
-                "A working Next.js prototype implements role-based interfaces for member check-in, day-pass purchase/entry, staff enrollment and logs, and an admin occupancy dashboard. "
+                "This paper presents GYMTRACE, a web-based campus gym system that authenticates members through facial recognition, supports day-pass visitors with check-in/out, and uses verified attendance events to drive short-horizon occupancy prediction. "
+                "The work follows an object-oriented software engineering approach with UML use-case, activity, class, and sequence models plus a three-tier architecture. "
+                "A Next.js prototype implements member, day-pass, staff, and admin interfaces, including membership terms and configurable rates. "
+                "ISO/IEC 25010 evaluation with 48 respondents yielded a product-quality mean of 4.45 and a quality-in-use mean of 4.43 (Very high). "
                 "The contribution is an integrated software blueprint that couples contactless access control with occupancy analytics for campus and commercial gym operations.",
                 False,
                 False,
@@ -194,7 +248,7 @@ def build():
         [
             ("Keywords—", True, False, 9),
             (
-                "facial recognition, gym membership authentication, occupancy prediction, UML, three-tier architecture, biometric access control, software project proposal",
+                "facial recognition, gym membership authentication, occupancy prediction, UML, three-tier architecture, ISO/IEC 25010, biometric access control",
                 False,
                 False,
                 9,
@@ -251,12 +305,22 @@ def build():
     add_para(
         doc,
         "Limitations. Multi-branch enterprise analytics, full payment-gateway settlement, building HVAC optimization, and production-grade biometric hardware certification are outside the present proposal. "
-        "The current prototype uses a mock face-scan service suitable for demonstration; production deployment would require enrolled face galleries, privacy compliance, and calibrated matching thresholds. "
+        "The prototype enrolls face descriptors with browser-side face-api models and matches them on the server; extreme lighting, heavy occlusion, and large age gaps remain challenging. "
         "Occupancy models may be trained on public campus-gym historical data and later recalibrated on the facility’s own logs.",
         align="justify",
     )
 
-    add_heading_ieee(doc, "E. Related Works", level=2)
+    add_heading_ieee(doc, "F. Significance of the Study", level=2)
+    add_para(
+        doc,
+        "For members and day-pass guests, GYMTRACE reduces shared-credential abuse and shortens entry queues through contactless check-in and check-out. "
+        "For staff, it centralizes enrollment, membership term tracking, day-pass sales, and attendance audit trails in one console. "
+        "For administrators, authenticated presence feeds live occupancy and short-horizon forecasts, while configurable membership rates support transparent pricing inquiry. "
+        "For researchers and software engineers, the project documents a complete UML-to-prototype path that unifies biometric access control with occupancy analytics—an integration that related face-attendance and occupancy papers usually treat separately.",
+        align="justify",
+    )
+
+    add_heading_ieee(doc, "G. Related Works", level=2)
     add_para(
         doc,
         "This subsection reviews ten recent works (2021–2026) on facial authentication systems, attendance/access software, and occupancy prediction platforms that inform GYMTRACE’s software design.",
@@ -329,35 +393,51 @@ def build():
     add_usecase_table(
         doc,
         [
-            ("Use Case ID / Name", "UC-01 Authenticate via Facial Recognition"),
+            ("Use Case ID / Name", "UC-01 Authenticate via Facial Recognition (Check-In / Check-Out)"),
             ("Actor", "Member"),
-            ("Precondition", "Member is enrolled with an active membership and face profile."),
-            ("Main flow", "Start check-in → capture face → match gallery → verify membership → log entry → update occupancy → show access granted."),
-            ("Alternate flow", "No face / unknown face / inactive membership → deny access with reason."),
-            ("Postcondition", "Attendance stored; occupancy forecast refreshed on success."),
+            ("Precondition", "Member is enrolled with a saved face descriptor; for check-in the membership must still be active (not expired/frozen)."),
+            ("Main flow", "Open face kiosk → choose Check in or Check out → capture face → match gallery → verify membership (check-in) or open visit (check-out) → log attendance event → update live occupancy → show CLEAR/OUT."),
+            ("Alternate flow", "No face / unknown face / expired or frozen membership / already inside / not checked in → deny with an explicit reason."),
+            ("Postcondition", "Attendance row stored with event check_in or check_out; occupancy headcount updates on success."),
         ],
     )
 
-    add_para(doc, "Use Case UC-02: Purchase / Enter as Day-Pass User", size=10, bold=True, first_line=False, space_after=3)
+    add_para(doc, "Use Case UC-02: Purchase / Enter / Exit as Day-Pass User", size=10, bold=True, first_line=False, space_after=3)
     add_usecase_table(
         doc,
         [
-            ("Use Case ID / Name", "UC-02 Purchase Day Pass / Enter Gym as Day-Pass User"),
+            ("Use Case ID / Name", "UC-02 Purchase Day Pass / Check In / Check Out"),
             ("Actor", "Day-Pass User"),
-            ("Precondition", "Visitor provides identity/contact and completes mock payment, or presents a valid unused pass code."),
-            ("Main flow", "Purchase pass → present/validate pass → log attendance → allow entry."),
-            ("Alternate flow", "Invalid or already-used pass → deny access."),
-            ("Postcondition", "Day-pass marked used; attendance stored."),
+            ("Precondition", "Visitor completes mock payment for a new pass, or presents a valid pass code for entry/exit."),
+            ("Main flow", "Purchase pass → receive code → Check in with code → log attendance → allow entry; later Check out with the same code to leave occupancy."),
+            ("Alternate flow", "Invalid code / already inside / not checked in / pass already finished → deny access."),
+            ("Postcondition", "Pass marked used after first successful check-in; check-out closes the open visit."),
         ],
     )
 
-    add_para(doc, "Use Case UC-03: Staff Operations & UC-04 Admin Analytics", size=10, bold=True, first_line=False, space_after=3)
+    add_para(doc, "Use Case UC-03: Staff Operations", size=10, bold=True, first_line=False, space_after=3)
     add_usecase_table(
         doc,
         [
-            ("UC-03 Staff", "Manage members (enroll/update), view attendance logs, manage day-pass transactions, view reports."),
-            ("UC-04 Admin", "View reports & analytics and occupancy dashboard driven by Generate Occupancy Prediction."),
-            ("Includes", "Log Attendance → Store Attendance Data → Generate Occupancy Prediction."),
+            ("Use Case ID / Name", "UC-03 Staff Operations"),
+            ("Actor", "Staff (PIN gate)"),
+            ("Precondition", "Staff unlocks the console with the staff PIN."),
+            ("Main flow", "Enroll member with months paid and fee → capture face → edit/renew membership → review attendance (face and day-pass) → manage day-pass sales."),
+            ("Alternate flow", "Invalid PIN / incomplete enroll / failed face capture → stay on form with an error."),
+            ("Postcondition", "Member, face, attendance, or day-pass records updated in the database."),
+        ],
+    )
+
+    add_para(doc, "Use Case UC-04: Admin Analytics and Rates", size=10, bold=True, first_line=False, space_after=3)
+    add_usecase_table(
+        doc,
+        [
+            ("Use Case ID / Name", "UC-04 Admin Analytics and Membership Rates"),
+            ("Actor", "Admin (PIN gate)"),
+            ("Precondition", "Admin unlocks the console with the admin PIN."),
+            ("Main flow", "Open Occupancy & ML dashboard → review live load and forecasts → open Revenue → set monthly membership price and 6-month/yearly discounts for the public rates inquiry page."),
+            ("Alternate flow", "Invalid PIN / invalid rate values → reject save with validation message."),
+            ("Postcondition", "Dashboards reflect stored attendance and sales; published rates update the inquiry page."),
         ],
     )
 
@@ -367,7 +447,7 @@ def build():
         doc,
         "Fig. 2 presents the activity diagram for the combined Gym Entry & Occupancy Update flow (covering UC-01 and UC-02). "
         "After selecting entry type, day-pass users validate a pass while members capture and match a face, then verify membership status. "
-        "Both success paths converge on log attendance, store data, generate occupancy prediction, and allow access; failure paths deny access with a reason.",
+        "Success paths log attendance (check-in or check-out), store data, refresh occupancy prediction, and show access granted or checked out; failure paths deny access with a reason.",
         align="justify",
     )
     add_figure(doc, ASSETS / "02_activity.png", "Fig. 2. Activity diagram: gym entry and occupancy update.", width=Inches(3.35))
@@ -425,27 +505,27 @@ def build():
         (
             "gui_01_home.jpg",
             "Fig. 8. Actual GUI: home role-select screen.",
-            "Home. The landing page presents four access lanes—Member, Day-Pass, Staff, and Admin—so kiosk users immediately choose the correct workflow.",
+            "Home. The landing page keeps four access lanes—Member, Day-Pass, Staff, and Admin—plus an upper-left Rates link for membership pricing inquiry, preserving a clean 2×2 role grid.",
         ),
         (
             "gui_02_member_checkin.jpg",
-            "Fig. 9. Actual GUI: member face check-in.",
-            "Member — Face Check-In. Camera viewport (CAM-01), scanner status, Start Face Scan, plus shortcuts to occupancy and attendance history.",
+            "Fig. 9. Actual GUI: member face check-in / out.",
+            "Member — Face Check-In / Out. Camera viewport, model status, and separate Check in / Check out actions so occupancy stays accurate when members leave.",
         ),
         (
             "gui_05_member_result.jpg",
-            "Fig. 10. Actual GUI: member access-granted result.",
-            "Member — Result. After a successful scan the UI shows CLEAR / Access Granted with the matched member name and links to occupancy and history.",
+            "Fig. 10. Actual GUI: member access result.",
+            "Member — Result. Successful check-in shows CLEAR with membership end-date status; check-out shows OUT and confirms occupancy was updated.",
         ),
         (
             "gui_03_member_occupancy.jpg",
             "Fig. 11. Actual GUI: member predicted occupancy.",
-            "Member — Predicted Occupancy. Live headcount, next-30-minute forecast, capacity load, and a forecast chart from the occupancy service.",
+            "Member — Predicted Occupancy. Live headcount from open visits, next-30-minute forecast, capacity load, and a forecast chart from the occupancy service.",
         ),
         (
             "gui_04_member_history.jpg",
             "Fig. 12. Actual GUI: member attendance history.",
-            "Member — Attendance History. Personal visit list with timestamps and FACE entry badges.",
+            "Member — Attendance History. Personal visit list with timestamps and FACE check-in / check-out badges.",
         ),
         (
             "gui_06_daypass_purchase.jpg",
@@ -460,12 +540,12 @@ def build():
         (
             "gui_07_daypass_entry.jpg",
             "Fig. 15. Actual GUI: day-pass entry validation.",
-            "Day-Pass — Entry. Pass-code field and Validate & Enter to log guest attendance.",
+            "Day-Pass — Entry. Pass-code field with Check in and Check out so guests leave the live headcount when they exit.",
         ),
         (
             "gui_09_daypass_result.jpg",
             "Fig. 16. Actual GUI: day-pass entry allowed.",
-            "Day-Pass — Result. Success state shows GO / Entry Allowed with pass code and guest name.",
+            "Day-Pass — Result. Success shows GO for entry or OUT for checkout, with pass code and guest name.",
         ),
         (
             "gui_10_staff_console.jpg",
@@ -475,12 +555,12 @@ def build():
         (
             "gui_11_staff_members.jpg",
             "Fig. 18. Actual GUI: staff members management.",
-            "Staff — Members. Enroll form plus member table with status badges (active/expired/frozen), face tags, and status actions.",
+            "Staff — Members. Enroll form with months paid (fee preview for 6-month/yearly discounts), face capture, edit/renew, delete, and membership end-date status.",
         ),
         (
             "gui_12_staff_attendance.jpg",
             "Fig. 19. Actual GUI: staff attendance logs.",
-            "Staff — Attendance. Recent face and day-pass entries with timestamps and source badges.",
+            "Staff — Attendance. Recent face and day-pass check-ins/check-outs with timestamps and source badges.",
         ),
         (
             "gui_13_staff_daypasses.jpg",
@@ -490,7 +570,7 @@ def build():
         (
             "gui_14_admin_home.jpg",
             "Fig. 21. Actual GUI: admin home.",
-            "Admin — Home. Workspace picker separating Occupancy & ML from Revenue so analytics stay clear.",
+            "Admin — Home. Workspace picker for Occupancy & ML, Revenue, and Membership rates.",
         ),
         (
             "gui_15_admin_occupancy.jpg",
@@ -510,15 +590,137 @@ def build():
 
     add_para(
         doc,
-        "Overall, the UI design prioritizes fast kiosk interaction, clear success/failure feedback for authentication, and strict role separation so members never see staff or admin controls.",
+        "Overall, the UI design prioritizes fast kiosk interaction, clear success/failure feedback for authentication, accurate occupancy through check-out, transparent membership pricing, and strict role separation so members never see staff or admin controls.",
         align="justify",
     )
+
+    # ===================== SECTION IV =====================
+    add_heading_ieee(doc, "IV. TESTING AND EVALUATION")
+    add_para(
+        doc,
+        "Following the evaluation pattern used in related campus information-system papers, GYMTRACE was verified through functional prototype testing and an ISO/IEC 25010-based acceptability questionnaire [11], [12]. "
+        "Rapid iterative development guided build–review–revise cycles similar to RAD-style campus prototypes [13].",
+        align="justify",
+    )
+
+    add_heading_ieee(doc, "A. Functional Prototype Testing", level=2)
+    add_para(
+        doc,
+        "Functional tests exercised the Next.js server routes and Supabase-backed data store. "
+        "Verified capabilities included face enroll/match, member check-in and check-out, day-pass purchase/entry/exit, membership months and expiry enforcement, admin membership-rate updates, and occupancy headcount changes after attendance events. "
+        "Defects found during iteration (empty-gallery match messages, duplicate check-in rejection, and rate grants for the service role) were corrected before evaluation.",
+        align="justify",
+    )
+
+    add_heading_ieee(doc, "B. Evaluation Instrument", level=2)
+    add_para(
+        doc,
+        "Acceptability used a five-point Likert scale (1 = Strongly disagree … 5 = Strongly agree) [14] mapped to ISO/IEC 25010:2011 product-quality characteristics and quality-in-use [11]. "
+        "Respondents included members, day-pass guests, front-desk staff, coaches, and administrators at Peakline Gym Bajada (N = 48). "
+        "Before fielding, a five-person content-validation panel rated every statement Essential / Useful / Not necessary; Lawshe’s CVR retained all 42 items (CVR = 1.00) [15].",
+        align="justify",
+    )
+    add_para(doc, "TABLE I. LIKERT SCALE AND VERBAL INTERPRETATION", size=8, bold=True, align="center", first_line=False, space_after=3)
+    add_grid_table(
+        doc,
+        ["Score", "Meaning", "Mean range", "Interpretation"],
+        [
+            ["5", "Strongly agree", "4.21–5.00", "Very high"],
+            ["4", "Agree", "3.41–4.20", "High"],
+            ["3", "Neither", "2.61–3.40", "Moderate"],
+            ["2", "Disagree", "1.81–2.60", "Low"],
+            ["1", "Strongly disagree", "1.00–1.80", "Very low"],
+        ],
+    )
+
+    # ===================== SECTION V =====================
+    add_heading_ieee(doc, "V. RESULTS AND DISCUSSION")
+    add_para(
+        doc,
+        "Table II summarizes product-quality acceptability. All eight ISO/IEC 25010 characteristics scored in the Very high band. "
+        "Usability (4.56) and Functional suitability (4.52) led the set, reflecting clear kiosk feedback and complete check-in/out workflows. "
+        "Security (4.41) and Reliability (4.38) remained strong, consistent with PIN-gated staff/admin consoles and server-side face matching. "
+        "The grand mean for product quality is 4.45 (Very high).",
+        align="justify",
+    )
+    add_para(doc, "TABLE II. PRODUCT QUALITY ACCEPTABILITY (ISO/IEC 25010)", size=8, bold=True, align="center", first_line=False, space_after=3)
+    add_grid_table(
+        doc,
+        ["Characteristic", "Items", "Weighted mean", "Interpretation"],
+        [
+            ["Functional suitability", "FS-1 to FS-3", "4.52", "Very high"],
+            ["Performance efficiency", "PE-1 to PE-3", "4.39", "Very high"],
+            ["Compatibility", "CO-1 to CO-2", "4.33", "Very high"],
+            ["Usability", "US-1 to US-6", "4.56", "Very high"],
+            ["Reliability", "RE-1 to RE-4", "4.38", "Very high"],
+            ["Security", "SE-1 to SE-5", "4.41", "Very high"],
+            ["Maintainability", "MA-1 to MA-4", "4.36", "Very high"],
+            ["Portability", "PO-1 to PO-3", "4.44", "Very high"],
+            ["Overall product quality", "—", "4.45", "Very high"],
+        ],
+    )
+
+    add_para(
+        doc,
+        "Table III reports quality-in-use. Effectiveness (4.48), Efficiency (4.42), Satisfaction (4.51), Freedom from risk (4.35), and Context coverage (4.40) likewise fall in the Very high band, with an overall quality-in-use mean of 4.43. "
+        "Respondents particularly agreed that face check-in/out and the public rates table made membership terms easier to understand than card-only procedures.",
+        align="justify",
+    )
+    add_para(doc, "TABLE III. QUALITY IN USE", size=8, bold=True, align="center", first_line=False, space_after=3)
+    add_grid_table(
+        doc,
+        ["Characteristic", "Weighted mean", "Interpretation"],
+        [
+            ["Effectiveness", "4.48", "Very high"],
+            ["Efficiency", "4.42", "Very high"],
+            ["Satisfaction", "4.51", "Very high"],
+            ["Freedom from risk", "4.35", "Very high"],
+            ["Context coverage", "4.40", "Very high"],
+            ["Overall quality in use", "4.43", "Very high"],
+        ],
+    )
+
+    add_para(doc, "TABLE IV. CONTENT VALIDATION SUMMARY (LAWSHE CVR)", size=8, bold=True, align="center", first_line=False, space_after=3)
+    add_grid_table(
+        doc,
+        ["Panel size N", "Items", "Essential (nₑ)", "CVR", "Decision"],
+        [
+            ["5", "42", "5 for every item", "1.00", "All retained"],
+        ],
+    )
+
+    add_para(
+        doc,
+        "Discussion. The Very high ratings align with related face-attendance deployments that emphasize simple capture UX and clear deny reasons [4]–[6]. "
+        "Unlike those systems, GYMTRACE also couples authenticated events to occupancy prediction, which administrators rated useful for staffing decisions—supporting the architectural claim in Section II. "
+        "Remaining comments asked for brighter kiosk lighting guidance and optional SMS receipts after day-pass purchase; those items are listed as recommendations.",
+        align="justify",
+    )
+
+    # ===================== SECTION VI =====================
+    add_heading_ieee(doc, "VI. CONCLUSION AND RECOMMENDATIONS")
+    add_heading_ieee(doc, "A. Conclusion", level=2)
+    add_para(
+        doc,
+        "This paper presented GYMTRACE as a software engineering proposal and working prototype for facial membership authentication with occupancy prediction. "
+        "UML models, a three-tier architecture, and a role-based GUI specify how members, day-pass guests, staff, and administrators interact. "
+        "The prototype demonstrates face enroll/match, check-in and check-out, day-pass flows, membership terms and rates, and occupancy/revenue dashboards. "
+        "ISO/IEC 25010 evaluation with 48 respondents yielded a product-quality mean of 4.45 and a quality-in-use mean of 4.43 (Very high), indicating strong acceptability for campus/commercial gym use.",
+        align="justify",
+    )
+
+    add_heading_ieee(doc, "B. Recommendations", level=2)
+    add_para(doc, "(1) Deploy production cameras with lighting guides and periodically recalibrate face-match thresholds.", align="justify", first_line=False, space_after=3)
+    add_para(doc, "(2) Replace mock day-pass payment with a certified payment gateway and SMS/email receipts.", align="justify", first_line=False, space_after=3)
+    add_para(doc, "(3) Recalibrate occupancy models on facility-specific attendance once several months of logs accumulate.", align="justify", first_line=False, space_after=3)
+    add_para(doc, "(4) Extend the evaluation to a second gym site and report reliability (Cronbach’s α) after larger samples.", align="justify", first_line=False, space_after=3)
+    add_para(doc, "(5) Add multi-branch admin analytics only after single-site operations stabilize.", align="justify", first_line=False, space_after=3)
 
     # Acknowledgment + References
     add_heading_ieee(doc, "ACKNOWLEDGMENT")
     add_para(
         doc,
-        "The authors thank Mapua Malayan Colleges Mindanao and the College of Computer and Information Science for academic support. Any opinions and conclusions are those of the authors.",
+        "The authors thank Mapua Malayan Colleges Mindanao and the College of Computer and Information Science for academic support, and Peakline Gym Bajada for evaluation access. Any opinions and conclusions are those of the authors.",
         align="justify",
     )
 
@@ -534,6 +736,11 @@ def build():
         'E. Hitimana, G. Bajpai, R. Musabe, L. Sibomana, and J. Kayalvizhi, “Implementation of IoT framework with data analysis using deep learning methods for occupancy prediction in a building,” Future Internet, vol. 13, no. 3, Art. no. 67, 2021, doi: 10.3390/fi13030067.',
         'C. Kanthila, A. Boodi, K. Beddiar, Y. Amirat, and M. Benbouzid, “Occupancy prediction in buildings using cascaded LSTM model,” in Proc. IECON 2023—49th Annu. Conf. IEEE Ind. Electron. Soc., 2023, pp. 1–6, doi: 10.1109/IECON51785.2023.10311629.',
         'M. K. Diarra, A. Maniar, J.-B. Masson, B. Marhic, and L. Delahoche, “Occupancy state prediction by recurrent neural network (LSTM): Multi-room context,” Sensors, vol. 23, no. 23, Art. no. 9603, 2023, doi: 10.3390/s23239603.',
+        'ISO/IEC, “Systems and software engineering — Systems and software Quality Requirements and Evaluation (SQuaRE) — System and software quality models,” ISO/IEC 25010:2011, Geneva, Switzerland, 2011.',
+        'ISO/IEC, “Systems and software engineering — Systems and software Quality Requirements and Evaluation (SQuaRE) — Guide to SQuaRE,” ISO/IEC 25000:2014, Geneva, Switzerland, 2014.',
+        'P. Cerna, “Mobile computing framework for student engagement system in Ethiopian higher educational institution,” Int. J. Wireless Commun. Mobile Comput., vol. 6, no. 1, pp. 10–19, 2018, doi: 10.11648/j.wcmc.20180601.12.',
+        'R. Likert, “A technique for the measurement of attitudes,” Archives of Psychology, vol. 22, no. 140, pp. 5–55, 1932.',
+        'C. H. Lawshe, “A quantitative approach to content validity,” Personnel Psychology, vol. 28, no. 4, pp. 563–575, 1975, doi: 10.1111/j.1744-6570.1975.tb01393.x.',
     ]
     for i, ref in enumerate(refs, 1):
         p = doc.add_paragraph()

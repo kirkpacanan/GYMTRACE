@@ -2,11 +2,14 @@ import { NextResponse } from "next/server";
 import {
   dbError,
   mapMember,
-  MEMBER_MONTHLY_FEE,
   membershipExpiry,
   supabase,
   type MemberStatus,
 } from "@/lib/db";
+import {
+  getMembershipRates,
+  quoteMembershipFee,
+} from "@/lib/membership-rates";
 
 export const runtime = "nodejs";
 
@@ -42,10 +45,11 @@ export async function POST(req: Request) {
       typeof body.monthsPaid === "number" && body.monthsPaid >= 1
         ? Math.floor(body.monthsPaid)
         : 1;
+    const rates = await getMembershipRates();
     const feeAmount =
       typeof body.feeAmount === "number" && body.feeAmount > 0
         ? body.feeAmount
-        : MEMBER_MONTHLY_FEE * monthsPaid;
+        : quoteMembershipFee(rates, monthsPaid);
     const faceTag =
       body.faceTag?.trim() ||
       `face-${body.name.toLowerCase().replace(/\s+/g, "-")}-${Date.now().toString(36)}`;

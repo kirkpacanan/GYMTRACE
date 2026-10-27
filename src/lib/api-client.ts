@@ -1,6 +1,10 @@
 import type { Attendance, DayPass, Member } from "./db";
 import type { OccupancySnapshot } from "./occupancy";
 import type { FaceScanResult } from "./face-match";
+import type {
+  MembershipPlanQuote,
+  MembershipRates,
+} from "./membership-rates";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -120,4 +124,22 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ role, pin }),
     }),
+
+  membershipRates: () =>
+    request<{ rates: MembershipRates; plans: MembershipPlanQuote[] }>(
+      "/api/membership-rates",
+    ),
+
+  updateMembershipRates: (body: {
+    monthlyPrice: number;
+    sixMonthDiscountPct: number;
+    yearlyDiscountPct: number;
+  }) =>
+    request<{ rates: MembershipRates; plans: MembershipPlanQuote[] }>(
+      "/api/membership-rates",
+      {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      },
+    ),
 };

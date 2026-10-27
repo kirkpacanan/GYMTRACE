@@ -27,7 +27,7 @@ const roles = [
     href: "/admin",
     num: "04",
     title: "Admin",
-    blurb: "Live load · forecasts · reports",
+    blurb: "Live load · forecasts · rates",
   },
 ];
 
@@ -47,6 +47,25 @@ export default function HomePage() {
         </motion.div>
 
         <div>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.02 }}
+            className="mb-5"
+          >
+            <Link
+              href="/membership"
+              className="group inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-muted transition hover:text-lime"
+            >
+              <span className="text-lime">Rates</span>
+              <span className="text-steel group-hover:text-lime">·</span>
+              <span>Membership pricing</span>
+              <span className="translate-x-0 text-lime opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100">
+                →
+              </span>
+            </Link>
+          </motion.div>
+
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

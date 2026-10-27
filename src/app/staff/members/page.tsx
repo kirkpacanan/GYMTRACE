@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PinGate } from "@/components/screens/PinGate";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -13,12 +13,19 @@ import {
   stopCamera,
 } from "@/lib/face-engine";
 import { formatMembershipEnd, type Member, type MemberStatus } from "@/lib/db";
+import {
+  DEFAULT_MEMBERSHIP_RATES,
+  formatPhp,
+  quoteMembershipFee,
+  type MembershipRates,
+} from "@/lib/membership-rates";
 
 export default function StaffMembersPage() {
   const [items, setItems] = useState<Member[]>([]);
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
   const [monthsPaid, setMonthsPaid] = useState("1");
+  const [rates, setRates] = useState<MembershipRates>(DEFAULT_MEMBERSHIP_RATES);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [enrolling, setEnrolling] = useState<Member | null>(null);
@@ -27,8 +34,12 @@ export default function StaffMembersPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await api.members();
-      setItems(res.items);
+      const [membersRes, ratesRes] = await Promise.all([
+        api.members(),
+        api.membershipRates(),
+      ]);
+      setItems(membersRes.items);
+      setRates(ratesRes.rates);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     }
@@ -38,12 +49,22 @@ export default function StaffMembersPage() {
     void load();
   }, [load]);
 
+  const months = Math.max(1, Math.floor(Number(monthsPaid) || 1));
+  const enrollFee = useMemo(
+    () => quoteMembershipFee(rates, months),
+    [rates, months],
+  );
+  const listFee = rates.monthlyPrice * months;
+  const feeHint =
+    months === 6 || months === 12
+      ? `${formatPhp(enrollFee)} with ${months === 12 ? rates.yearlyDiscountPct : rates.sixMonthDiscountPct}% discount (list ${formatPhp(listFee)})`
+      : formatPhp(enrollFee);
+
   async function enroll(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
     try {
-      const months = Math.max(1, Math.floor(Number(monthsPaid) || 1));
       const created = await api.createMember({
         name,
         contact,
@@ -117,6 +138,7 @@ export default function StaffMembersPage() {
             </Button>
           </div>
         </form>
+        <p className="mt-3 text-xs text-muted">Fee for this enroll: {feeHint}</p>
         {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
       </Panel>
 
