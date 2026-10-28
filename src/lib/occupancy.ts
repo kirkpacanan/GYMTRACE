@@ -309,6 +309,10 @@ export async function getReportsSummary() {
     (sum, row) => sum + Number(row.fee_amount || 0),
     0,
   );
+  const memberMonthsSoldMonth = monthMembers.reduce(
+    (sum, row) => sum + Math.max(1, Number(row.months_paid ?? 1)),
+    0,
+  );
   const dayPassRevenueMonth = monthPasses.reduce(
     (sum, row) => sum + Number(row.amount || 0),
     0,
@@ -340,6 +344,7 @@ export async function getReportsSummary() {
     }).length,
     memberRevenueMonth,
     membersPaidMonth: monthMembers.length,
+    memberMonthsSoldMonth,
     dayPassRevenueMonth,
     dayPassCountMonth: monthPasses.length,
     totalRevenueMonth: memberRevenueMonth + dayPassRevenueMonth,

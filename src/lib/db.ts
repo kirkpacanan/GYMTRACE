@@ -18,6 +18,9 @@ export type Member = {
 /** Default monthly membership fee in PHP */
 export const MEMBER_MONTHLY_FEE = 1500;
 
+/** Default day-pass fee in PHP */
+export const DAY_PASS_FEE = 250;
+
 export function addCalendarMonths(from: Date, months: number) {
   const next = new Date(from.getTime());
   const day = next.getDate();

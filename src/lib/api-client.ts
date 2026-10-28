@@ -95,6 +95,9 @@ export const api = {
 
   dayPasses: () => request<{ items: DayPass[] }>("/api/day-passes"),
 
+  deleteDayPass: (id: number) =>
+    request<{ ok: boolean }>(`/api/day-passes/${id}`, { method: "DELETE" }),
+
   reports: () =>
     request<{
       entriesToday: number;
@@ -107,6 +110,7 @@ export const api = {
       activeMembers: number;
       memberRevenueMonth: number;
       membersPaidMonth: number;
+      memberMonthsSoldMonth: number;
       dayPassRevenueMonth: number;
       dayPassCountMonth: number;
       totalRevenueMonth: number;
@@ -134,6 +138,7 @@ export const api = {
     monthlyPrice: number;
     sixMonthDiscountPct: number;
     yearlyDiscountPct: number;
+    dayPassPrice: number;
   }) =>
     request<{ rates: MembershipRates; plans: MembershipPlanQuote[] }>(
       "/api/membership-rates",

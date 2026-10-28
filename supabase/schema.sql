@@ -62,13 +62,24 @@ create table if not exists membership_rates (
   monthly_price integer not null default 1500 check (monthly_price > 0),
   six_month_discount_pct integer not null default 10 check (six_month_discount_pct >= 0 and six_month_discount_pct <= 90),
   yearly_discount_pct integer not null default 20 check (yearly_discount_pct >= 0 and yearly_discount_pct <= 90),
+  day_pass_price integer not null default 250 check (day_pass_price > 0),
   updated_at timestamptz not null default now()
 );
 
 alter table membership_rates enable row level security;
 
-insert into membership_rates (id, monthly_price, six_month_discount_pct, yearly_discount_pct)
-values (1, 1500, 10, 20)
+alter table membership_rates add column if not exists day_pass_price integer not null default 250;
+-- Keep check constraint when column already existed without one (safe re-run)
+do $$
+begin
+  alter table membership_rates
+    add constraint membership_rates_day_pass_price_check check (day_pass_price > 0);
+exception
+  when duplicate_object then null;
+end $$;
+
+insert into membership_rates (id, monthly_price, six_month_discount_pct, yearly_discount_pct, day_pass_price)
+values (1, 1500, 10, 20, 250)
 on conflict (id) do nothing;
 
 grant select, insert, update, delete on public.membership_rates to service_role;

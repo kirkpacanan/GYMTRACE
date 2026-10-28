@@ -1,4 +1,5 @@
 import {
+  DAY_PASS_FEE,
   dbError,
   MEMBER_MONTHLY_FEE,
   supabase,
@@ -8,6 +9,7 @@ export type MembershipRates = {
   monthlyPrice: number;
   sixMonthDiscountPct: number;
   yearlyDiscountPct: number;
+  dayPassPrice: number;
   updatedAt: string | null;
 };
 
@@ -25,6 +27,7 @@ export const DEFAULT_MEMBERSHIP_RATES: MembershipRates = {
   monthlyPrice: MEMBER_MONTHLY_FEE,
   sixMonthDiscountPct: 10,
   yearlyDiscountPct: 20,
+  dayPassPrice: DAY_PASS_FEE,
   updatedAt: null,
 };
 
@@ -32,6 +35,7 @@ export function mapMembershipRates(row: {
   monthly_price?: number | null;
   six_month_discount_pct?: number | null;
   yearly_discount_pct?: number | null;
+  day_pass_price?: number | null;
   updated_at?: string | null;
 }): MembershipRates {
   return {
@@ -41,6 +45,7 @@ export function mapMembershipRates(row: {
     ),
     sixMonthDiscountPct: clampPct(row.six_month_discount_pct ?? 10),
     yearlyDiscountPct: clampPct(row.yearly_discount_pct ?? 20),
+    dayPassPrice: Math.max(1, Number(row.day_pass_price ?? DAY_PASS_FEE)),
     updatedAt: row.updated_at ? String(row.updated_at) : null,
   };
 }

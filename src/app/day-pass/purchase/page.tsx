@@ -1,21 +1,34 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { PageTransition } from "@/components/motion/PageTransition";
 import { PageHeader } from "@/components/ui/Brand";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Panel } from "@/components/ui/Panel";
 import { api } from "@/lib/api-client";
+import { formatPhp } from "@/lib/membership-rates";
 
 export default function DayPassPurchasePage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
   const [method, setMethod] = useState<"GCash" | "Card">("GCash");
+  const [price, setPrice] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await api.membershipRates();
+        setPrice(res.rates.dayPassPrice);
+      } catch {
+        setPrice(250);
+      }
+    })();
+  }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -32,11 +45,13 @@ export default function DayPassPurchasePage() {
     }
   }
 
+  const priceLabel = price != null ? formatPhp(price) : "…";
+
   return (
     <PageTransition>
       <PageHeader
         title="Purchase Day Pass"
-        subtitle="One-day access · ₱250 · mock GCash / Card payment."
+        subtitle={`One-day access · ${priceLabel} · mock GCash / Card payment.`}
         backHref="/"
       />
       <Panel className="mx-auto max-w-lg p-6 sm:p-8">
@@ -75,7 +90,7 @@ export default function DayPassPurchasePage() {
                 </button>
               ))}
             </div>
-            <p className="mt-3 display text-2xl text-lime">₱250</p>
+            <p className="mt-3 display text-2xl text-lime">{priceLabel}</p>
           </div>
           {error ? (
             <p className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">

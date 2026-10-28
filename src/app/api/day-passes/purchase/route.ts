@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { dbError, mapDayPass, supabase } from "@/lib/db";
+import { DAY_PASS_FEE, dbError, mapDayPass, supabase } from "@/lib/db";
+import { getMembershipRates } from "@/lib/membership-rates";
 
 export const runtime = "nodejs";
 
@@ -35,6 +36,8 @@ export async function POST(req: Request) {
         { status: 402 },
       );
     }
+    const rates = await getMembershipRates();
+    const amount = Math.max(1, rates.dayPassPrice || DAY_PASS_FEE);
     const code = await nextCode();
     const { data, error } = await supabase()
       .from("day_passes")
@@ -42,7 +45,7 @@ export async function POST(req: Request) {
         code,
         name: body.name.trim(),
         contact: body.contact.trim(),
-        amount: 250,
+        amount,
       })
       .select("*")
       .single();

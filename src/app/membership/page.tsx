@@ -46,7 +46,8 @@ export default function MembershipInquiryPage() {
             <p className="mt-2 text-sm text-muted">
               Monthly base {formatPhp(rates.monthlyPrice)}. 6-month discount{" "}
               {rates.sixMonthDiscountPct}%. Yearly discount{" "}
-              {rates.yearlyDiscountPct}%.
+              {rates.yearlyDiscountPct}%. Day pass{" "}
+              {formatPhp(rates.dayPassPrice)}.
             </p>
           ) : null}
         </div>

@@ -71,7 +71,7 @@ export default function AdminRevenuePage() {
                 value={data ? peso(data.memberRevenueMonth) : "—"}
                 hint={
                   data
-                    ? `${data.membersPaidMonth} memberships recorded`
+                    ? `${data.membersPaidMonth} members enrolled · ${data.memberMonthsSoldMonth} months purchased`
                     : undefined
                 }
               />

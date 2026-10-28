@@ -52,6 +52,7 @@ export default function AdminRatesPage() {
   const [monthlyPrice, setMonthlyPrice] = useState("1500");
   const [sixMonthDiscountPct, setSixMonthDiscountPct] = useState("10");
   const [yearlyDiscountPct, setYearlyDiscountPct] = useState("20");
+  const [dayPassPrice, setDayPassPrice] = useState("250");
   const [saved, setSaved] = useState<MembershipRates | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -67,6 +68,7 @@ export default function AdminRatesPage() {
       setMonthlyPrice(String(res.rates.monthlyPrice));
       setSixMonthDiscountPct(String(res.rates.sixMonthDiscountPct));
       setYearlyDiscountPct(String(res.rates.yearlyDiscountPct));
+      setDayPassPrice(String(res.rates.dayPassPrice));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load rates");
     } finally {
@@ -89,9 +91,10 @@ export default function AdminRatesPage() {
         90,
         Math.max(0, Math.floor(Number(yearlyDiscountPct) || 0)),
       ),
+      dayPassPrice: Math.max(1, Math.floor(Number(dayPassPrice) || 1)),
       updatedAt: saved?.updatedAt ?? null,
     }),
-    [monthlyPrice, sixMonthDiscountPct, yearlyDiscountPct, saved],
+    [monthlyPrice, sixMonthDiscountPct, yearlyDiscountPct, dayPassPrice, saved],
   );
 
   const plans = useMemo(
@@ -109,9 +112,12 @@ export default function AdminRatesPage() {
         monthlyPrice: previewRates.monthlyPrice,
         sixMonthDiscountPct: previewRates.sixMonthDiscountPct,
         yearlyDiscountPct: previewRates.yearlyDiscountPct,
+        dayPassPrice: previewRates.dayPassPrice,
       });
       setSaved(res.rates);
-      setMessage("Membership rates saved. Public inquiry page will show these.");
+      setMessage(
+        "Rates saved. Membership inquiry and day-pass purchase will use these.",
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {
@@ -121,17 +127,17 @@ export default function AdminRatesPage() {
 
   return (
     <PinGate role="admin">
-      <h1 className="display text-4xl text-ink sm:text-5xl">Membership rates</h1>
+      <h1 className="display text-4xl text-ink sm:text-5xl">Rates</h1>
       <p className="mt-2 max-w-xl text-muted">
-        Set the monthly price and volume discounts for 6-month and yearly plans.
-        Visitors see the comparison table on the public inquiry page.
+        Set membership plan pricing, volume discounts, and the day-pass amount.
+        Visitors see these on the inquiry and day-pass purchase pages.
       </p>
 
       <Panel className="mt-6 p-5 sm:p-6">
         {loading ? (
           <p className="text-sm text-muted">Loading rates…</p>
         ) : (
-          <form onSubmit={save} className="grid gap-4 sm:grid-cols-3">
+          <form onSubmit={save} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Input
               label="Monthly price (₱)"
               type="number"
@@ -158,7 +164,15 @@ export default function AdminRatesPage() {
               onChange={(e) => setYearlyDiscountPct(e.target.value)}
               required
             />
-            <div className="sm:col-span-3">
+            <Input
+              label="Day-pass price (₱)"
+              type="number"
+              min={1}
+              value={dayPassPrice}
+              onChange={(e) => setDayPassPrice(e.target.value)}
+              required
+            />
+            <div className="sm:col-span-2 lg:col-span-4">
               <Button type="submit" disabled={saving}>
                 {saving ? "Saving…" : "Save rates"}
               </Button>
@@ -173,6 +187,10 @@ export default function AdminRatesPage() {
         <div className="border-b border-panel-border px-4 py-3">
           <p className="eyebrow text-lime">Live preview</p>
           <h2 className="display mt-1 text-2xl text-ink">Plan comparison</h2>
+          <p className="mt-1 text-sm text-muted">
+            Day pass:{" "}
+            <span className="text-lime">{formatPhp(previewRates.dayPassPrice)}</span>
+          </p>
         </div>
         <RatesTable plans={plans} />
       </Panel>

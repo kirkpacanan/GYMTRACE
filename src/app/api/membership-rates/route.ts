@@ -30,10 +30,12 @@ export async function PATCH(req: Request) {
       monthlyPrice?: number;
       sixMonthDiscountPct?: number;
       yearlyDiscountPct?: number;
+      dayPassPrice?: number;
     };
     const monthlyPrice = Math.floor(Number(body.monthlyPrice));
     const sixMonthDiscountPct = Math.floor(Number(body.sixMonthDiscountPct));
     const yearlyDiscountPct = Math.floor(Number(body.yearlyDiscountPct));
+    const dayPassPrice = Math.floor(Number(body.dayPassPrice));
     if (!Number.isFinite(monthlyPrice) || monthlyPrice < 1) {
       return NextResponse.json(
         { error: "Monthly price must be at least 1" },
@@ -60,12 +62,19 @@ export async function PATCH(req: Request) {
         { status: 400 },
       );
     }
+    if (!Number.isFinite(dayPassPrice) || dayPassPrice < 1) {
+      return NextResponse.json(
+        { error: "Day-pass price must be at least 1" },
+        { status: 400 },
+      );
+    }
 
     const payload = {
       id: 1,
       monthly_price: monthlyPrice,
       six_month_discount_pct: sixMonthDiscountPct,
       yearly_discount_pct: yearlyDiscountPct,
+      day_pass_price: dayPassPrice,
       updated_at: new Date().toISOString(),
     };
 
@@ -93,6 +102,7 @@ export async function PATCH(req: Request) {
           monthlyPrice,
           sixMonthDiscountPct,
           yearlyDiscountPct,
+          dayPassPrice,
           updatedAt: payload.updated_at,
         };
 

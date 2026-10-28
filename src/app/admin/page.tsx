@@ -20,8 +20,8 @@ const sections = [
   {
     href: "/admin/rates",
     num: "03",
-    title: "Membership rates",
-    blurb: "Set monthly price and 6-month / yearly discounts",
+    title: "Rates & day pass",
+    blurb: "Membership plans, discounts, and day-pass amount",
   },
 ];
 
